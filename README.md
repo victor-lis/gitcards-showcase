@@ -1,4 +1,4 @@
-# 🔮 GitCards Showcase
+# 🔮 Git Cards - Showcase
 
 > A plataforma definitiva para desenvolvedores criarem, personalizarem e compartilharem seus "Developer Cards" dinâmicos.
 
@@ -69,6 +69,113 @@ graph LR
     B -- Zod Schemas --> C
     D[Database] -- Prisma Client --> C
 ```
+
+### 📐 Arquitetura Antiga
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 👤 Usuário
+    box "Frontend (Next.js)" #000000
+        participant Page as Page/Component
+        participant Hook as React Query Hook<br/>(useGetUserCard)
+        participant Client as API Client<br/>(Axios)
+    end
+    box "Backend (Node.js/Fastify)" #333333
+        participant Route as Fastify Route<br/>(Controller)
+        participant Service as Business Service<br/>(UserCardService)
+        participant Prisma as Prisma ORM
+    end
+    participant DB as PostgreSQL
+
+    Note over User, DB: 🚀 Início do Fluxo de Leitura (Ex: Get Card)
+
+    User->>Page: Acessa a página de detalhes
+    Page->>Hook: Chama hook useGetUserCard(id)
+    activate Hook
+    Hook->>Client: Executa função de fetch
+    Client->>Route: HTTP GET /user-cards/:id
+    activate Route
+
+    Note right of Client: Validação de Auth (JWT)<br/>via Middleware
+
+    Route->>Route: Valida Params com Zod
+    Route->>Service: Chama UserCardService.findById(id)
+    activate Service
+
+    Service->>Prisma: prisma.userCard.findUnique()
+    activate Prisma
+    Prisma->>DB: Query SQL
+    DB-->>Prisma: Retorna dados brutos
+    deactivate Prisma
+
+    Service->>Service: Valida retorno com Zod Schema
+    Service-->>Route: Retorna Objeto UserCard
+    deactivate Service
+
+    Route-->>Client: HTTP 200 OK (JSON)
+    deactivate Route
+
+    Client-->>Hook: Resolve Promise com dados
+    Hook-->>Page: Atualiza estado (data, isLoading)
+    deactivate Hook
+    
+    Page-->>User: Renderiza o Card SVG na tela
+```
+
+### 🔄 Arquitetura e Fluxo de Dados
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 👤 Usuário
+    box "Client Side (Browser)" #000000
+        participant UI as 🖥️ UI Component
+    end
+    box "Server Side (Next.js Runtime)" #222222
+        participant Action as ⚡ Server Action
+        participant Service as 🧠 Service (Importado)
+        participant ORM as 🔌 Prisma Client
+    end
+    participant DB as 🐘 PostgreSQL
+
+    Note over User, DB: ⚡ Fluxo Otimizado (Zero HTTP Interno)
+
+    User->>UI: Interação (Click / Submit)
+    UI->>Action: Invoca Server Action (RPC)
+    activate Action
+
+    Note right of Action: 🔒 Auth Check (Session)<br/>✅ Validação Zod (Input)
+
+    Action->>Service: await UserCardService.get(id)
+    activate Service
+
+    Note right of Service: 📦 Execução direta em memória<br/>(Sem serialização HTTP JSON)
+
+    Service->>ORM: prisma.userCard.findUnique()
+    activate ORM
+    ORM->>DB: SQL Query
+    DB-->>ORM: Result Set
+    deactivate ORM
+
+    Service-->>Action: Retorna Objeto/DTO
+    deactivate Service
+
+    Note left of Action: 💾 Opcional: Cachear com<br/>unstable_cache() aqui
+
+    Action-->>UI: Retorna Payload Serializado
+    deactivate Action
+
+    UI-->>User: Atualiza Interface
+```
+
+### 📂 Estrutura do Projeto (Detalhada)
+
+- `/nextjs`: Aplicação Frontend (Loja e Dashboard).
+- `/nodejs`: API RESTful (Gerenciamento de usuários, compras e entrega de assets).
+- `/packages`: Bibliotecas compartilhadas (Schemas Zod, Tipos).
+- `/nginx`: Configurações de proxy reverso.
+
 
 ## 📸 Galeria (Mockups)
 
